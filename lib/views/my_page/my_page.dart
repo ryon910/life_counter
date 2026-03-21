@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/important_person.dart';
 import '../../models/user_settings.dart';
 import '../../providers/user_settings_provider.dart';
@@ -103,6 +104,9 @@ class MyPage extends ConsumerWidget {
             AppCard(
               child: Column(
                 children: [
+                  _linkRow('フィードバックを送る',
+                      onTap: () => _sendFeedback(context)),
+                  _divider(),
                   _linkRow('プライバシーポリシー',
                       onTap: () => _showLegal(context, 'privacy_policy.html',
                           'プライバシーポリシー')),
@@ -124,6 +128,17 @@ class MyPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // ─── フィードバック ───
+
+  void _sendFeedback(BuildContext context) {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'nakano.dev.app@gmail.com',
+      query: 'subject=LifeCounter フィードバック&body=\n\n---\nLifeCounter v1.0.0',
+    );
+    launchUrl(uri);
   }
 
   // ─── 法的ページ ───
