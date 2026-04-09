@@ -29,6 +29,12 @@ class RecordDetailPage extends StatefulWidget {
 
 class _RecordDetailPageState extends State<RecordDetailPage> {
   bool _editing = false;
+
+  // v1.0.1 新フィールド
+  late final TextEditingController _gratitudeCtrl;
+  late final TextEditingController _tomorrowMsgCtrl;
+
+  // 既存フィールド
   late final TextEditingController _goalCtrl;
   late final TextEditingController _goodCtrl;
   late final TextEditingController _whyCtrl;
@@ -39,6 +45,10 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
   @override
   void initState() {
     super.initState();
+    _gratitudeCtrl =
+        TextEditingController(text: widget.record.gratitude ?? '');
+    _tomorrowMsgCtrl =
+        TextEditingController(text: widget.record.tomorrowMessage ?? '');
     _goalCtrl = TextEditingController(text: widget.record.todayGoal ?? '');
     _goodCtrl =
         TextEditingController(text: widget.record.reflectionGood ?? '');
@@ -54,6 +64,8 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
 
   @override
   void dispose() {
+    _gratitudeCtrl.dispose();
+    _tomorrowMsgCtrl.dispose();
     _goalCtrl.dispose();
     _goodCtrl.dispose();
     _whyCtrl.dispose();
@@ -65,6 +77,10 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
 
   Future<void> _save() async {
     final r = widget.record;
+    r.gratitude =
+        _gratitudeCtrl.text.isNotEmpty ? _gratitudeCtrl.text : null;
+    r.tomorrowMessage =
+        _tomorrowMsgCtrl.text.isNotEmpty ? _tomorrowMsgCtrl.text : null;
     r.todayGoal = _goalCtrl.text.isNotEmpty ? _goalCtrl.text : null;
     r.reflectionGood = _goodCtrl.text.isNotEmpty ? _goodCtrl.text : null;
     r.reflectionWhy = _whyCtrl.text.isNotEmpty ? _whyCtrl.text : null;
@@ -77,6 +93,14 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
     await widget.onSave(r);
     setState(() => _editing = false);
   }
+
+  bool get _hasContent =>
+      widget.record.gratitude != null ||
+      widget.record.todayGoal != null ||
+      widget.record.reflectionGood != null ||
+      widget.record.tomorrowMessage != null ||
+      widget.record.reflectionWhy != null ||
+      widget.record.reflectionTomorrow != null;
 
   @override
   Widget build(BuildContext context) {
@@ -148,92 +172,149 @@ class _RecordDetailPageState extends State<RecordDetailPage> {
   }
 
   List<Widget> _buildViewMode() {
-    return [
-      if (widget.record.todayGoal != null)
-        _viewCard('\u270E 今日やること', widget.record.todayGoal!),
-      if (widget.record.reflectionGood != null) ...[
-        const SizedBox(height: 12),
-        _viewCard('\u{1F33F} 良かったこと', widget.record.reflectionGood!),
-      ],
-      if (widget.record.reflectionWhy != null) ...[
-        const SizedBox(height: 12),
-        _viewCard('\u{1F4AD} なぜ？', widget.record.reflectionWhy!),
-      ],
-      if (widget.record.reflectionTomorrow != null) ...[
-        const SizedBox(height: 12),
-        _viewCard('\u2728 明日の楽しみ', widget.record.reflectionTomorrow!),
-      ],
-      if (widget.record.weeklyReflectionHighlight != null) ...[
-        const SizedBox(height: 12),
-        _viewCard(
-            '\u{1F4C5} 今週のハイライト', widget.record.weeklyReflectionHighlight!),
-      ],
-      if (widget.record.weeklyReflectionChange != null) ...[
-        const SizedBox(height: 12),
-        _viewCard(
-            '\u{1F504} 来週変えること', widget.record.weeklyReflectionChange!),
-      ],
-    ];
+    final widgets = <Widget>[];
+
+    // 朝のカード（感謝 + 今日を素晴らしい一日に）
+    final morningFields = <Widget>[];
+    if (widget.record.gratitude != null) {
+      morningFields.add(_viewField('感謝していること', widget.record.gratitude!));
+    }
+    if (widget.record.todayGoal != null) {
+      if (morningFields.isNotEmpty) morningFields.add(const SizedBox(height: 20));
+      morningFields.add(_viewField('今日を素晴らしい一日にするために', widget.record.todayGoal!));
+    }
+    if (morningFields.isNotEmpty) {
+      widgets.add(AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: morningFields)));
+    }
+
+    // 夜のカード（嬉しかったこと + 明日の自分へ）
+    final eveningFields = <Widget>[];
+    if (widget.record.reflectionGood != null) {
+      eveningFields.add(_viewField('嬉しかったこと', widget.record.reflectionGood!));
+    }
+    if (widget.record.tomorrowMessage != null) {
+      if (eveningFields.isNotEmpty) eveningFields.add(const SizedBox(height: 20));
+      eveningFields.add(_viewField('明日の自分へ', widget.record.tomorrowMessage!));
+    }
+    if (eveningFields.isNotEmpty) {
+      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 14));
+      widgets.add(AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: eveningFields)));
+    }
+
+    // v1.0 旧フィールド（過去データがあれば1枚のカードにまとめて表示）
+    final legacyFields = <Widget>[];
+    if (widget.record.reflectionWhy != null) {
+      legacyFields.add(_viewField('\u{1F4AD} なぜ？', widget.record.reflectionWhy!));
+    }
+    if (widget.record.reflectionTomorrow != null) {
+      if (legacyFields.isNotEmpty) legacyFields.add(const SizedBox(height: 20));
+      legacyFields.add(_viewField('\u2728 明日の楽しみ', widget.record.reflectionTomorrow!));
+    }
+    if (widget.record.weeklyReflectionHighlight != null) {
+      if (legacyFields.isNotEmpty) legacyFields.add(const SizedBox(height: 20));
+      legacyFields.add(_viewField('\u{1F4C5} 今週のハイライト', widget.record.weeklyReflectionHighlight!));
+    }
+    if (widget.record.weeklyReflectionChange != null) {
+      if (legacyFields.isNotEmpty) legacyFields.add(const SizedBox(height: 20));
+      legacyFields.add(_viewField('\u{1F504} 来週変えること', widget.record.weeklyReflectionChange!));
+    }
+    if (legacyFields.isNotEmpty) {
+      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 14));
+      widgets.add(AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: legacyFields)));
+    }
+
+    return widgets;
   }
 
   List<Widget> _buildEditMode() {
-    final hasWeekly = widget.record.weeklyReflectionHighlight != null ||
+    final hasLegacyWhy = widget.record.reflectionWhy != null;
+    final hasLegacyTomorrow = widget.record.reflectionTomorrow != null;
+    final hasLegacyWeekly = widget.record.weeklyReflectionHighlight != null ||
         widget.record.weeklyReflectionChange != null;
-    return [
-      _editField('\u270E 今日やること', _goalCtrl),
-      const SizedBox(height: 12),
-      _editField('\u{1F33F} 良かったこと', _goodCtrl),
-      const SizedBox(height: 12),
-      _editField('\u{1F4AD} なぜ？', _whyCtrl),
-      const SizedBox(height: 12),
-      _editField('\u2728 明日の楽しみ', _tomorrowCtrl),
-      if (hasWeekly) ...[
-        const SizedBox(height: 12),
-        _editField('\u{1F4C5} 今週のハイライト', _weeklyHighCtrl),
-        const SizedBox(height: 12),
-        _editField('\u{1F504} 来週変えること', _weeklyChangeCtrl),
-      ],
-    ];
-  }
 
-  bool get _hasContent =>
-      widget.record.todayGoal != null ||
-      widget.record.reflectionGood != null ||
-      widget.record.reflectionWhy != null ||
-      widget.record.reflectionTomorrow != null;
+    final widgets = <Widget>[];
 
-  static Widget _viewCard(String label, String value) {
-    return AppCard(
+    // 朝のカード
+    widgets.add(AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: AppTextStyles.label.copyWith(letterSpacing: 0)),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: GoogleFonts.zenKakuGothicNew(
-              fontSize: 14,
-              fontWeight: FontWeight.w300,
-            ),
-          ),
+          _editField('感謝していること', _gratitudeCtrl),
+          const SizedBox(height: 20),
+          _editField('今日を素晴らしい一日にするために', _goalCtrl),
         ],
       ),
+    ));
+
+    // 夜のカード
+    widgets.add(const SizedBox(height: 14));
+    widgets.add(AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _editField('嬉しかったこと', _goodCtrl),
+          const SizedBox(height: 20),
+          _editField('明日の自分へ', _tomorrowMsgCtrl),
+        ],
+      ),
+    ));
+
+    // 旧フィールド（過去データがある場合のみ）
+    final legacyEdits = <Widget>[];
+    if (hasLegacyWhy) {
+      legacyEdits.add(_editField('\u{1F4AD} なぜ？', _whyCtrl));
+    }
+    if (hasLegacyTomorrow) {
+      if (legacyEdits.isNotEmpty) legacyEdits.add(const SizedBox(height: 20));
+      legacyEdits.add(_editField('\u2728 明日の楽しみ', _tomorrowCtrl));
+    }
+    if (hasLegacyWeekly) {
+      if (legacyEdits.isNotEmpty) legacyEdits.add(const SizedBox(height: 20));
+      legacyEdits.add(_editField('\u{1F4C5} 今週のハイライト', _weeklyHighCtrl));
+      legacyEdits.add(const SizedBox(height: 20));
+      legacyEdits.add(_editField('\u{1F504} 来週変えること', _weeklyChangeCtrl));
+    }
+    if (legacyEdits.isNotEmpty) {
+      widgets.add(const SizedBox(height: 14));
+      widgets.add(AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: legacyEdits)));
+    }
+
+    return widgets;
+  }
+
+  static Widget _viewField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.zenKakuGothicNew(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary)),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: GoogleFonts.zenKakuGothicNew(
+            fontSize: 14,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
+      ],
     );
   }
 
   static Widget _editField(String label, TextEditingController ctrl) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: AppTextStyles.label.copyWith(letterSpacing: 0)),
-          const SizedBox(height: 10),
-          AppInput(controller: ctrl, maxLength: 100),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.zenKakuGothicNew(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary)),
+        const SizedBox(height: 8),
+        AppInput(controller: ctrl, maxLength: 200),
+      ],
     );
   }
-
 }

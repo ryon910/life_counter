@@ -11,4 +11,6 @@ class PrefsKeys {
   static const nightModeHour = 'night_mode_hour';
   static const nightModeMinute = 'night_mode_minute';
   static const recentQuestionIds = 'recent_question_ids';
+  static const reviewRequestedDay2 = 'review_requested_day2';
+  static const reviewRequestedDay7 = 'review_requested_day7';
 }

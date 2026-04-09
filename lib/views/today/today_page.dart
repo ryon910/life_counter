@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:intl/intl.dart';
 import '../../providers/isar_provider.dart';
 import '../../providers/user_settings_provider.dart';
 import '../../services/life_calculator.dart';
-import '../../services/question_selector.dart';
+import '../../utils/prefs_keys.dart';
 import '../shared/app_colors.dart';
-import '../shared/app_toast.dart';
 import '../shared/app_text_styles.dart';
 import '../shared/app_card.dart';
-import '../shared/app_segmented_control.dart';
-import '../shared/app_button.dart';
 import '../shared/app_input.dart';
-import '../shared/pill_label.dart';
-import 'great_person_card.dart';
 
 class TodayPage extends ConsumerStatefulWidget {
   const TodayPage({super.key});
@@ -24,51 +20,70 @@ class TodayPage extends ConsumerStatefulWidget {
 }
 
 class _TodayPageState extends ConsumerState<TodayPage> {
-  bool _isNightMode = false;
-  String? _savedGoal;
+  final _gratitudeController = TextEditingController();
   final _goalController = TextEditingController();
   final _goodController = TextEditingController();
-  final _whyController = TextEditingController();
-  final _tomorrowController = TextEditingController();
-  final _weeklyHighlightController = TextEditingController();
-  final _weeklyChangeController = TextEditingController();
-  bool _reflectionSaved = false;
-  String? _yesterdayGood;
-  Map<String, dynamic>? _todayQuestion;
+  final _tomorrowMessageController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _initNightMode();
-    _loadAll();
+    _loadTodayRecord();
+    _checkReviewTiming();
+    _gratitudeController.addListener(_autoSave);
+    _goalController.addListener(_autoSave);
+    _goodController.addListener(_autoSave);
+    _tomorrowMessageController.addListener(_autoSave);
   }
 
-  /// 設定時刻に基づいて夜モードを自動判定
-  void _initNightMode() {
-    final settings = ref.read(userSettingsProvider);
-    final now = DateTime.now();
-    final nightStart = DateTime(
-        now.year, now.month, now.day,
-        settings.nightModeHour, settings.nightModeMinute);
-    _isNightMode = now.isAfter(nightStart);
-  }
-
-  /// 全データを並列で読み込み（エラーハンドリング付き）
-  Future<void> _loadAll() async {
-    await Future.wait([
-      _loadTodayRecord(),
-      _loadYesterdayReflection(),
-      _loadQuestion(),
-    ]);
-  }
-
-  Future<void> _loadQuestion() async {
+  /// レビュー依頼のタイミングをチェック
+  Future<void> _checkReviewTiming() async {
     try {
       final prefs = ref.read(sharedPreferencesProvider);
-      final q = await QuestionSelector.selectToday(prefs);
-      if (mounted) setState(() => _todayQuestion = q);
+      final repo = ref.read(dailyRecordRepositoryProvider);
+
+      // 前日に夜の記入があるか確認
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final yesterdayRecord = await repo.getByDate(yesterday);
+      final hasYesterdayEvening = yesterdayRecord?.reflectionGood != null ||
+          yesterdayRecord?.tomorrowMessage != null;
+
+      if (!hasYesterdayEvening) return;
+
+      // 全レコードから夜の記入がある日数をカウント
+      final allRecords = await repo.getAll();
+      final eveningDays = allRecords
+          .where((r) => r.reflectionGood != null || r.tomorrowMessage != null)
+          .length;
+
+      final alreadyDay2 = prefs.getBool(PrefsKeys.reviewRequestedDay2) ?? false;
+      final alreadyDay7 = prefs.getBool(PrefsKeys.reviewRequestedDay7) ?? false;
+
+      bool shouldRequest = false;
+
+      // Day 2: 夜の記入が2日以上 & まだ表示していない
+      if (eveningDays >= 2 && !alreadyDay2) {
+        await prefs.setBool(PrefsKeys.reviewRequestedDay2, true);
+        shouldRequest = true;
+      }
+      // Day 7: 夜の記入が7日以上 & まだ表示していない
+      else if (eveningDays >= 7 && !alreadyDay7) {
+        await prefs.setBool(PrefsKeys.reviewRequestedDay7, true);
+        shouldRequest = true;
+      }
+
+      if (shouldRequest) {
+        final inAppReview = InAppReview.instance;
+        if (await inAppReview.isAvailable()) {
+          // 少し遅延させて、画面が落ち着いてから表示
+          await Future.delayed(const Duration(seconds: 2));
+          if (mounted) {
+            await inAppReview.requestReview();
+          }
+        }
+      }
     } catch (e) {
-      debugPrint('Question load error: $e');
+      debugPrint('Review check error: $e');
     }
   }
 
@@ -78,13 +93,10 @@ class _TodayPageState extends ConsumerState<TodayPage> {
       final record = await repo.getOrCreate(DateTime.now());
       if (mounted) {
         setState(() {
-          if (record.todayGoal != null) _savedGoal = record.todayGoal;
-          if (record.reflectionGood != null) {
-            _goodController.text = record.reflectionGood!;
-            _whyController.text = record.reflectionWhy ?? '';
-            _tomorrowController.text = record.reflectionTomorrow ?? '';
-            _reflectionSaved = true;
-          }
+          _gratitudeController.text = record.gratitude ?? '';
+          _goalController.text = record.todayGoal ?? '';
+          _goodController.text = record.reflectionGood ?? '';
+          _tomorrowMessageController.text = record.tomorrowMessage ?? '';
         });
       }
     } catch (e) {
@@ -92,63 +104,50 @@ class _TodayPageState extends ConsumerState<TodayPage> {
     }
   }
 
-  Future<void> _loadYesterdayReflection() async {
+  // デバウンス用タイマー
+  int _saveTimer = 0;
+
+  void _autoSave() {
+    _saveTimer++;
+    final currentTimer = _saveTimer;
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (currentTimer == _saveTimer && mounted) {
+        _saveAll();
+      }
+    });
+  }
+
+  Future<void> _saveAll() async {
     try {
       final repo = ref.read(dailyRecordRepositoryProvider);
-      final yesterday = DateTime.now().subtract(const Duration(days: 1));
-      final record = await repo.getByDate(yesterday);
-      if (mounted && record?.reflectionGood != null) {
-        setState(() => _yesterdayGood = record!.reflectionGood);
-      }
+      final record = await repo.getOrCreate(DateTime.now());
+      record.gratitude =
+          _gratitudeController.text.isNotEmpty ? _gratitudeController.text : null;
+      record.todayGoal =
+          _goalController.text.isNotEmpty ? _goalController.text : null;
+      record.reflectionGood =
+          _goodController.text.isNotEmpty ? _goodController.text : null;
+      record.tomorrowMessage = _tomorrowMessageController.text.isNotEmpty
+          ? _tomorrowMessageController.text
+          : null;
+      await repo.save(record);
     } catch (e) {
-      debugPrint('Yesterday reflection load error: $e');
+      debugPrint('Auto save error: $e');
     }
-  }
-
-  Future<void> _saveGoal(String goal) async {
-    final repo = ref.read(dailyRecordRepositoryProvider);
-    final record = await repo.getOrCreate(DateTime.now());
-    record.todayGoal = goal;
-    await repo.save(record);
-    setState(() => _savedGoal = goal);
-  }
-
-  Future<void> _saveReflection() async {
-    final repo = ref.read(dailyRecordRepositoryProvider);
-    final record = await repo.getOrCreate(DateTime.now());
-    record.reflectionGood =
-        _goodController.text.isNotEmpty ? _goodController.text : null;
-    record.reflectionWhy =
-        _whyController.text.isNotEmpty ? _whyController.text : null;
-    record.reflectionTomorrow =
-        _tomorrowController.text.isNotEmpty ? _tomorrowController.text : null;
-    if (_isSunday) {
-      record.weeklyReflectionHighlight =
-          _weeklyHighlightController.text.isNotEmpty
-              ? _weeklyHighlightController.text
-              : null;
-      record.weeklyReflectionChange =
-          _weeklyChangeController.text.isNotEmpty
-              ? _weeklyChangeController.text
-              : null;
-    }
-    await repo.save(record);
-    setState(() => _reflectionSaved = true);
-    if (mounted) AppToast.success(context, '保存しました');
   }
 
   @override
   void dispose() {
+    _gratitudeController.removeListener(_autoSave);
+    _goalController.removeListener(_autoSave);
+    _goodController.removeListener(_autoSave);
+    _tomorrowMessageController.removeListener(_autoSave);
+    _gratitudeController.dispose();
     _goalController.dispose();
     _goodController.dispose();
-    _whyController.dispose();
-    _tomorrowController.dispose();
-    _weeklyHighlightController.dispose();
-    _weeklyChangeController.dispose();
+    _tomorrowMessageController.dispose();
     super.dispose();
   }
-
-  bool get _isSunday => DateTime.now().weekday == DateTime.sunday;
 
   @override
   Widget build(BuildContext context) {
@@ -159,14 +158,17 @@ class _TodayPageState extends ConsumerState<TodayPage> {
     }
 
     final lifeDays = LifeCalculator.lifeDays(birthDate);
-    final userAge = LifeCalculator.currentAge(birthDate);
     final formatter = NumberFormat('#,###', 'ja_JP');
+    final now = DateTime.now();
+    final dateStr =
+        '${now.year}.${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')}';
 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 48, 20, 130),
         child: Column(
           children: [
+            // ヘッダー: 日付 + 人生日数
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 28),
               child: Column(
@@ -182,200 +184,87 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                           fontWeight: FontWeight.w300,
                           letterSpacing: 1.5,
                           color: AppColors.textMuted)),
+                  const SizedBox(height: 8),
+                  Text(dateStr,
+                      style: GoogleFonts.zenKakuGothicNew(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300,
+                          letterSpacing: 1.5,
+                          color: AppColors.textMuted)),
                 ],
               ),
             ),
-            Center(
-              child: AppSegmentedControl<bool>(
-                items: const [
-                  SegmentItem(value: false, label: '\u2600 朝'),
-                  SegmentItem(value: true, label: '\u{1F319} 夜'),
+
+            const SizedBox(height: 8),
+
+            // 朝の問いかけ（1枚のカード）
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _questionField(
+                    'いま感謝していることは？',
+                    _gratitudeController,
+                    'ひとつでも、いくつでも',
+                  ),
+                  const SizedBox(height: 24),
+                  _questionField(
+                    '今日を素晴らしい一日にするために、何をする？',
+                    _goalController,
+                    '小さなことでOK',
+                  ),
                 ],
-                selectedValue: _isNightMode,
-                onChanged: (v) => setState(() {
-                  _isNightMode = v;
-                  if (!v) _reflectionSaved = false;
-                }),
               ),
             ),
-            const SizedBox(height: 24),
-            if (!_isNightMode)
-              ..._buildMorning(userAge)
-            else
-              ..._buildEvening(),
+
+            const SizedBox(height: 20),
+
+            // 夜の問いかけ（1枚のカード）
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _questionField(
+                    '今日、嬉しかったことは？',
+                    _goodController,
+                    'どんな小さなことでも',
+                  ),
+                  const SizedBox(height: 24),
+                  _questionField(
+                    '明日の自分に一言伝えるなら？',
+                    _tomorrowMessageController,
+                    '自由にどうぞ',
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  List<Widget> _buildMorning(int userAge) {
-    return [
-      if (_todayQuestion != null) _questionCard(_todayQuestion!),
-      const SizedBox(height: 14),
-      _goalCard(),
-      const SizedBox(height: 14),
-      if (_yesterdayGood != null) ...[
-        AppCard(
-          color: AppColors.bgWarm,
-          showShadow: false,
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('\u{1F33F} 昨日の振り返り',
-                    style: AppTextStyles.label.copyWith(letterSpacing: 0)),
-                const SizedBox(height: 10),
-                Text('「$_yesterdayGood」',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary)),
-              ]),
-        ),
-        const SizedBox(height: 14),
-      ],
-      GreatPersonCard(userAge: userAge),
-    ];
-  }
-
-  List<Widget> _buildEvening() {
-    return [
-      if (_todayQuestion != null) _questionCard(_todayQuestion!),
-      const SizedBox(height: 14),
-      if (_savedGoal != null) ...[
-        AppCard(
-          color: AppColors.bgWarm,
-          showShadow: false,
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('\u270E 今日やること',
-                    style: AppTextStyles.label.copyWith(letterSpacing: 0)),
-                const SizedBox(height: 8),
-                Text(_savedGoal!,
-                    style: GoogleFonts.zenKakuGothicNew(
-                        fontSize: 14, fontWeight: FontWeight.w300)),
-              ]),
-        ),
-        const SizedBox(height: 14),
-      ],
-      AppCard(
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('\u{1F319} 夜の振り返り',
-                  style: AppTextStyles.label.copyWith(letterSpacing: 0)),
-              const SizedBox(height: 20),
-              _reflectionField('今日、良かったことは？', _goodController),
-              const SizedBox(height: 18),
-              _reflectionField('それは、なぜ起きた？', _whyController),
-              const SizedBox(height: 18),
-              _reflectionField('明日、楽しみなことは？', _tomorrowController),
-              if (_isSunday) ...[
-                const SizedBox(height: 8),
-                const Divider(color: AppColors.border),
-                const SizedBox(height: 20),
-                Text('\u{1F4C5} 週の振り返り（日曜日）',
-                    style: AppTextStyles.label
-                        .copyWith(color: AppColors.accent, letterSpacing: 0)),
-                const SizedBox(height: 16),
-                _reflectionField(
-                    '今週、一番心に残った瞬間は？', _weeklyHighlightController),
-                const SizedBox(height: 18),
-                _reflectionField(
-                    '来週、一つだけ変えるとしたら？', _weeklyChangeController),
-              ],
-              const SizedBox(height: 16),
-              AppButton.primary(
-                onPressed: _saveReflection,
-                label: _reflectionSaved ? '更新する' : '記録する',
-              ),
-            ]),
-      ),
-    ];
-  }
-
-  Widget _questionCard(Map<String, dynamic> q) {
-    return AppCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          PillLabel(text: q['category'] as String),
-          const SizedBox(width: 8),
-          Text('今日の問い',
-              style: AppTextStyles.label.copyWith(letterSpacing: 0)),
-        ]),
-        const SizedBox(height: 14),
-        Text(q['text'] as String,
+  Widget _questionField(
+    String label,
+    TextEditingController controller,
+    String placeholder,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
             style: GoogleFonts.zenKakuGothicNew(
-                fontSize: 15, fontWeight: FontWeight.w300, height: 1.9)),
-      ]),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+                height: 1.6)),
+        const SizedBox(height: 12),
+        AppInput(
+          controller: controller,
+          placeholder: placeholder,
+          maxLength: 200,
+        ),
+      ],
     );
-  }
-
-  Widget _goalCard() {
-    return AppCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('\u270E 今日、何をする？',
-            style: AppTextStyles.label.copyWith(letterSpacing: 0)),
-        const SizedBox(height: 14),
-        if (_savedGoal != null)
-          Row(children: [
-            Expanded(
-                child: Text(_savedGoal!,
-                    style: GoogleFonts.zenKakuGothicNew(
-                        fontSize: 15, fontWeight: FontWeight.w400))),
-            GestureDetector(
-              onTap: () => setState(() {
-                _goalController.text = _savedGoal!;
-                _savedGoal = null;
-              }),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                    color: AppColors.bgWarm,
-                    borderRadius: BorderRadius.circular(8)),
-                child: Text('編集',
-                    style: GoogleFonts.zenKakuGothicNew(
-                        fontSize: 11, color: AppColors.textMuted)),
-              ),
-            ),
-          ])
-        else
-          Row(children: [
-            Expanded(
-                child: AppInput(
-                    controller: _goalController,
-                    placeholder: '今日やりたいことを1つ',
-                    maxLength: 100)),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () {
-                if (_goalController.text.isNotEmpty) {
-                  _saveGoal(_goalController.text);
-                }
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(10)),
-                child: Text('保存',
-                    style: GoogleFonts.zenKakuGothicNew(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white)),
-              ),
-            ),
-          ]),
-      ]),
-    );
-  }
-
-  Widget _reflectionField(String label, TextEditingController controller) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: AppTextStyles.caption.copyWith(fontSize: 12)),
-      const SizedBox(height: 8),
-      AppInput(controller: controller, maxLength: 100),
-    ]);
   }
 }

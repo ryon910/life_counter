@@ -27,48 +27,58 @@ const DailyRecordSchema = CollectionSchema(
       name: r'date',
       type: IsarType.dateTime,
     ),
-    r'greatPersonId': PropertySchema(
+    r'gratitude': PropertySchema(
       id: 2,
+      name: r'gratitude',
+      type: IsarType.string,
+    ),
+    r'greatPersonId': PropertySchema(
+      id: 3,
       name: r'greatPersonId',
       type: IsarType.string,
     ),
     r'morningQuestionId': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'morningQuestionId',
       type: IsarType.string,
     ),
     r'reflectionGood': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'reflectionGood',
       type: IsarType.string,
     ),
     r'reflectionTomorrow': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'reflectionTomorrow',
       type: IsarType.string,
     ),
     r'reflectionWhy': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'reflectionWhy',
       type: IsarType.string,
     ),
     r'todayGoal': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'todayGoal',
       type: IsarType.string,
     ),
+    r'tomorrowMessage': PropertySchema(
+      id: 9,
+      name: r'tomorrowMessage',
+      type: IsarType.string,
+    ),
     r'updatedAt': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'weeklyReflectionChange': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'weeklyReflectionChange',
       type: IsarType.string,
     ),
     r'weeklyReflectionHighlight': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'weeklyReflectionHighlight',
       type: IsarType.string,
     )
@@ -108,6 +118,12 @@ int _dailyRecordEstimateSize(
 ) {
   var bytesCount = offsets.last;
   {
+    final value = object.gratitude;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.greatPersonId;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -144,6 +160,12 @@ int _dailyRecordEstimateSize(
     }
   }
   {
+    final value = object.tomorrowMessage;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.weeklyReflectionChange;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -166,15 +188,17 @@ void _dailyRecordSerialize(
 ) {
   writer.writeDateTime(offsets[0], object.createdAt);
   writer.writeDateTime(offsets[1], object.date);
-  writer.writeString(offsets[2], object.greatPersonId);
-  writer.writeString(offsets[3], object.morningQuestionId);
-  writer.writeString(offsets[4], object.reflectionGood);
-  writer.writeString(offsets[5], object.reflectionTomorrow);
-  writer.writeString(offsets[6], object.reflectionWhy);
-  writer.writeString(offsets[7], object.todayGoal);
-  writer.writeDateTime(offsets[8], object.updatedAt);
-  writer.writeString(offsets[9], object.weeklyReflectionChange);
-  writer.writeString(offsets[10], object.weeklyReflectionHighlight);
+  writer.writeString(offsets[2], object.gratitude);
+  writer.writeString(offsets[3], object.greatPersonId);
+  writer.writeString(offsets[4], object.morningQuestionId);
+  writer.writeString(offsets[5], object.reflectionGood);
+  writer.writeString(offsets[6], object.reflectionTomorrow);
+  writer.writeString(offsets[7], object.reflectionWhy);
+  writer.writeString(offsets[8], object.todayGoal);
+  writer.writeString(offsets[9], object.tomorrowMessage);
+  writer.writeDateTime(offsets[10], object.updatedAt);
+  writer.writeString(offsets[11], object.weeklyReflectionChange);
+  writer.writeString(offsets[12], object.weeklyReflectionHighlight);
 }
 
 DailyRecord _dailyRecordDeserialize(
@@ -186,16 +210,18 @@ DailyRecord _dailyRecordDeserialize(
   final object = DailyRecord();
   object.createdAt = reader.readDateTime(offsets[0]);
   object.date = reader.readDateTime(offsets[1]);
-  object.greatPersonId = reader.readStringOrNull(offsets[2]);
+  object.gratitude = reader.readStringOrNull(offsets[2]);
+  object.greatPersonId = reader.readStringOrNull(offsets[3]);
   object.id = id;
-  object.morningQuestionId = reader.readStringOrNull(offsets[3]);
-  object.reflectionGood = reader.readStringOrNull(offsets[4]);
-  object.reflectionTomorrow = reader.readStringOrNull(offsets[5]);
-  object.reflectionWhy = reader.readStringOrNull(offsets[6]);
-  object.todayGoal = reader.readStringOrNull(offsets[7]);
-  object.updatedAt = reader.readDateTime(offsets[8]);
-  object.weeklyReflectionChange = reader.readStringOrNull(offsets[9]);
-  object.weeklyReflectionHighlight = reader.readStringOrNull(offsets[10]);
+  object.morningQuestionId = reader.readStringOrNull(offsets[4]);
+  object.reflectionGood = reader.readStringOrNull(offsets[5]);
+  object.reflectionTomorrow = reader.readStringOrNull(offsets[6]);
+  object.reflectionWhy = reader.readStringOrNull(offsets[7]);
+  object.todayGoal = reader.readStringOrNull(offsets[8]);
+  object.tomorrowMessage = reader.readStringOrNull(offsets[9]);
+  object.updatedAt = reader.readDateTime(offsets[10]);
+  object.weeklyReflectionChange = reader.readStringOrNull(offsets[11]);
+  object.weeklyReflectionHighlight = reader.readStringOrNull(offsets[12]);
   return object;
 }
 
@@ -223,10 +249,14 @@ P _dailyRecordDeserializeProp<P>(
     case 7:
       return (reader.readStringOrNull(offset)) as P;
     case 8:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 9:
       return (reader.readStringOrNull(offset)) as P;
     case 10:
+      return (reader.readDateTime(offset)) as P;
+    case 11:
+      return (reader.readStringOrNull(offset)) as P;
+    case 12:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -584,6 +614,160 @@ extension DailyRecordQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'gratitude',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'gratitude',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'gratitude',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'gratitude',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'gratitude',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'gratitude',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'gratitude',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'gratitude',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'gratitude',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'gratitude',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'gratitude',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      gratitudeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'gratitude',
+        value: '',
       ));
     });
   }
@@ -1566,6 +1750,160 @@ extension DailyRecordQueryFilter
   }
 
   QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'tomorrowMessage',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'tomorrowMessage',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'tomorrowMessage',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'tomorrowMessage',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'tomorrowMessage',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'tomorrowMessage',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'tomorrowMessage',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'tomorrowMessage',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'tomorrowMessage',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'tomorrowMessage',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'tomorrowMessage',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
+      tomorrowMessageIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'tomorrowMessage',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterFilterCondition>
       updatedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1966,6 +2304,18 @@ extension DailyRecordQuerySortBy
     });
   }
 
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> sortByGratitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'gratitude', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> sortByGratitudeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'gratitude', Sort.desc);
+    });
+  }
+
   QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> sortByGreatPersonId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'greatPersonId', Sort.asc);
@@ -2045,6 +2395,19 @@ extension DailyRecordQuerySortBy
     });
   }
 
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> sortByTomorrowMessage() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tomorrowMessage', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy>
+      sortByTomorrowMessageDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tomorrowMessage', Sort.desc);
+    });
+  }
+
   QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> sortByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
@@ -2109,6 +2472,18 @@ extension DailyRecordQuerySortThenBy
   QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> thenByDateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'date', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> thenByGratitude() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'gratitude', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> thenByGratitudeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'gratitude', Sort.desc);
     });
   }
 
@@ -2203,6 +2578,19 @@ extension DailyRecordQuerySortThenBy
     });
   }
 
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> thenByTomorrowMessage() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tomorrowMessage', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy>
+      thenByTomorrowMessageDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'tomorrowMessage', Sort.desc);
+    });
+  }
+
   QueryBuilder<DailyRecord, DailyRecord, QAfterSortBy> thenByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
@@ -2258,6 +2646,13 @@ extension DailyRecordQueryWhereDistinct
     });
   }
 
+  QueryBuilder<DailyRecord, DailyRecord, QDistinct> distinctByGratitude(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'gratitude', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<DailyRecord, DailyRecord, QDistinct> distinctByGreatPersonId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2305,6 +2700,14 @@ extension DailyRecordQueryWhereDistinct
     });
   }
 
+  QueryBuilder<DailyRecord, DailyRecord, QDistinct> distinctByTomorrowMessage(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'tomorrowMessage',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<DailyRecord, DailyRecord, QDistinct> distinctByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'updatedAt');
@@ -2348,6 +2751,12 @@ extension DailyRecordQueryProperty
     });
   }
 
+  QueryBuilder<DailyRecord, String?, QQueryOperations> gratitudeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'gratitude');
+    });
+  }
+
   QueryBuilder<DailyRecord, String?, QQueryOperations> greatPersonIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'greatPersonId');
@@ -2384,6 +2793,13 @@ extension DailyRecordQueryProperty
   QueryBuilder<DailyRecord, String?, QQueryOperations> todayGoalProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'todayGoal');
+    });
+  }
+
+  QueryBuilder<DailyRecord, String?, QQueryOperations>
+      tomorrowMessageProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'tomorrowMessage');
     });
   }
 

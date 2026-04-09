@@ -334,15 +334,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             ),
             const SizedBox(height: 40),
             Text(
-              '今日、何をしますか？',
+              '今日を素晴らしい一日にするために\n何をしますか？',
               style: AppTextStyles.bodyLarge
                   .copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             AppInput(
               controller: _goalController,
-              placeholder: '今日やりたいことを1つ',
-              maxLength: 100,
+              placeholder: '小さなことでOK',
+              maxLength: 200,
               textAlign: TextAlign.center,
               showBorder: true,
             ),

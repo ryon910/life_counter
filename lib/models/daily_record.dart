@@ -21,6 +21,10 @@ class DailyRecord {
   String? morningQuestionId;
   String? greatPersonId;
 
+  // v1.0.1 新規フィールド
+  String? gratitude;        // 「今 感謝していることはある？」
+  String? tomorrowMessage;  // 「明日の自分に一言伝えるなら？」
+
   DateTime createdAt = DateTime.now();
   DateTime updatedAt = DateTime.now();
 }

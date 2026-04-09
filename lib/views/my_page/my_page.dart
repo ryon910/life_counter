@@ -28,9 +28,6 @@ class MyPage extends ConsumerWidget {
     final notifText = settings.notificationEnabled
         ? 'ON \u30FB ${settings.notificationHour}:${settings.notificationMinute.toString().padLeft(2, '0')}'
         : 'OFF';
-    final nightText =
-        '${settings.nightModeHour}:${settings.nightModeMinute.toString().padLeft(2, '0')}';
-
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 48, 20, 130),
@@ -50,11 +47,6 @@ class MyPage extends ConsumerWidget {
                   _settingsRow(
                     '\u{1F464}', '性別', genText,
                     onTap: () => _editGender(context, ref, settings),
-                  ),
-                  _divider(),
-                  _settingsRow(
-                    '\u{1F319}', '夜モード切替', nightText,
-                    onTap: () => _editNightMode(context, ref, settings),
                   ),
                   _divider(),
                   _settingsRow(
@@ -120,7 +112,7 @@ class MyPage extends ConsumerWidget {
             const SizedBox(height: 28),
 
             Text(
-              'LifeCounter v1.0.0',
+              'LifeCounter v1.0.1',
               style: AppTextStyles.caption
                   .copyWith(fontSize: 11, color: AppColors.textDisabled),
             ),
@@ -135,8 +127,8 @@ class MyPage extends ConsumerWidget {
   void _sendFeedback(BuildContext context) {
     final uri = Uri(
       scheme: 'mailto',
-      path: 'nakano.dev.app@gmail.com',
-      query: 'subject=LifeCounter フィードバック&body=\n\n---\nLifeCounter v1.0.0',
+      path: 'ryo.nakano.biz+lifecounter@gmail.com',
+      query: 'subject=LifeCounter フィードバック&body=\n\n---\nLifeCounter v1.0.1',
     );
     launchUrl(uri);
   }
@@ -211,23 +203,6 @@ class MyPage extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  void _editNightMode(
-      BuildContext context, WidgetRef ref, UserSettings settings) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: settings.nightModeHour,
-        minute: settings.nightModeMinute,
-      ),
-    );
-    if (picked != null) {
-      await ref.read(userSettingsProvider.notifier).updateNightMode(
-            picked.hour,
-            picked.minute,
-          );
-    }
   }
 
   void _editNotification(
