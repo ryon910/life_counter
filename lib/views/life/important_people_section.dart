@@ -13,7 +13,6 @@ import '../shared/app_colors.dart';
 import '../shared/app_text_styles.dart';
 import '../shared/app_card.dart';
 import '../shared/app_button.dart';
-import '../shared/premium_coming_soon_modal.dart';
 import 'important_person_form_page.dart';
 import 'important_person_detail_page.dart';
 
@@ -31,11 +30,6 @@ class _ImportantPeopleSectionState
   ImportantPerson? _selectedPerson;
 
   Future<void> _addPerson() async {
-    final persons = ref.read(importantPersonsProvider).valueOrNull ?? [];
-    if (persons.length >= 2) {
-      PremiumComingSoonModal.show(context);
-      return;
-    }
     final result = await ImportantPersonFormPage.show(context);
     if (result != null) {
       await ref.read(importantPersonRepositoryProvider).add(result);
@@ -132,13 +126,7 @@ class _ImportantPeopleSectionState
         ],
         // 追加ボタン
         GestureDetector(
-          onTap: () {
-            if (persons.length >= 2) {
-              PremiumComingSoonModal.show(context);
-            } else {
-              _addPerson();
-            }
-          },
+          onTap: _addPerson,
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -149,24 +137,10 @@ class _ImportantPeopleSectionState
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Column(
-              children: [
-                Text(
-                  '+ 大切な人を追加',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  persons.length >= 2
-                      ? '3人目以降は Premium（準備中）'
-                      : '無料で${2 - persons.length}人追加できます',
-                  style: GoogleFonts.zenKakuGothicNew(
-                    fontSize: 12,
-                    color: AppColors.textDisabled,
-                  ),
-                ),
-              ],
+            child: Text(
+              '+ 大切な人を追加',
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.textSecondary),
             ),
           ),
         ),

@@ -16,6 +16,7 @@ class MainTabView extends StatefulWidget {
 
 class _MainTabViewState extends State<MainTabView> {
   int _currentIndex = 0;
+  final _recordKey = GlobalKey<RecordCalendarPageState>();
 
   static const _tabs = [
     _TabItem(icon: '\u25C9', label: '今日'),    // ◉
@@ -24,11 +25,11 @@ class _MainTabViewState extends State<MainTabView> {
     _TabItem(icon: '\u25C7', label: 'マイページ'), // ◇
   ];
 
-  static const _pages = [
-    TodayPage(),
-    RecordCalendarPage(),
-    LifeTabPage(),
-    MyPage(),
+  late final _pages = [
+    const TodayPage(),
+    RecordCalendarPage(key: _recordKey),
+    const LifeTabPage(),
+    const MyPage(),
   ];
 
   @override
@@ -86,7 +87,10 @@ class _MainTabViewState extends State<MainTabView> {
             return Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() => _currentIndex = i),
+                onTap: () {
+                  setState(() => _currentIndex = i);
+                  if (i == 1) _recordKey.currentState?.reload();
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   child: Column(

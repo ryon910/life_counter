@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,15 +27,35 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   final _goodController = TextEditingController();
   final _tomorrowMessageController = TextEditingController();
 
+  final _gratitudeFocus = FocusNode();
+  final _goalFocus = FocusNode();
+  final _goodFocus = FocusNode();
+  final _tomorrowMessageFocus = FocusNode();
+
+  Timer? _idleTimer;
+  late final AppLifecycleListener _lifecycleListener;
+
   @override
   void initState() {
     super.initState();
     _loadTodayRecord();
     _checkReviewTiming();
-    _gratitudeController.addListener(_autoSave);
-    _goalController.addListener(_autoSave);
-    _goodController.addListener(_autoSave);
-    _tomorrowMessageController.addListener(_autoSave);
+
+    // フォーカスが外れた時に保存
+    for (final fn in [_gratitudeFocus, _goalFocus, _goodFocus, _tomorrowMessageFocus]) {
+      fn.addListener(() {
+        if (!fn.hasFocus) _saveAll();
+      });
+    }
+
+    // アプリがバックグラウンドに移行した時に保存
+    _lifecycleListener = AppLifecycleListener(
+      onStateChange: (state) {
+        if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+          _saveAll();
+        }
+      },
+    );
   }
 
   /// レビュー依頼のタイミングをチェック
@@ -104,16 +126,11 @@ class _TodayPageState extends ConsumerState<TodayPage> {
     }
   }
 
-  // デバウンス用タイマー
-  int _saveTimer = 0;
-
-  void _autoSave() {
-    _saveTimer++;
-    final currentTimer = _saveTimer;
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (currentTimer == _saveTimer && mounted) {
-        _saveAll();
-      }
+  // 入力変更時: 2秒アイドルで保存
+  void _onFieldChanged(String _) {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(const Duration(milliseconds: 2000), () {
+      if (mounted) _saveAll();
     });
   }
 
@@ -138,10 +155,12 @@ class _TodayPageState extends ConsumerState<TodayPage> {
 
   @override
   void dispose() {
-    _gratitudeController.removeListener(_autoSave);
-    _goalController.removeListener(_autoSave);
-    _goodController.removeListener(_autoSave);
-    _tomorrowMessageController.removeListener(_autoSave);
+    _idleTimer?.cancel();
+    _lifecycleListener.dispose();
+    _gratitudeFocus.dispose();
+    _goalFocus.dispose();
+    _goodFocus.dispose();
+    _tomorrowMessageFocus.dispose();
     _gratitudeController.dispose();
     _goalController.dispose();
     _goodController.dispose();
@@ -206,12 +225,16 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                     'いま感謝していることは？',
                     _gratitudeController,
                     'ひとつでも、いくつでも',
+                    focusNode: _gratitudeFocus,
+                    textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 24),
                   _questionField(
                     '今日を素晴らしい一日にするために、何をする？',
                     _goalController,
                     '小さなことでOK',
+                    focusNode: _goalFocus,
+                    textInputAction: TextInputAction.next,
                   ),
                 ],
               ),
@@ -228,12 +251,16 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                     '今日、嬉しかったことは？',
                     _goodController,
                     'どんな小さなことでも',
+                    focusNode: _goodFocus,
+                    textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 24),
                   _questionField(
                     '明日の自分に一言伝えるなら？',
                     _tomorrowMessageController,
                     '自由にどうぞ',
+                    focusNode: _tomorrowMessageFocus,
+                    textInputAction: TextInputAction.done,
                   ),
                 ],
               ),
@@ -247,8 +274,10 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   Widget _questionField(
     String label,
     TextEditingController controller,
-    String placeholder,
-  ) {
+    String placeholder, {
+    FocusNode? focusNode,
+    TextInputAction? textInputAction,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -263,6 +292,9 @@ class _TodayPageState extends ConsumerState<TodayPage> {
           controller: controller,
           placeholder: placeholder,
           maxLength: 200,
+          focusNode: focusNode,
+          textInputAction: textInputAction,
+          onChanged: _onFieldChanged,
         ),
       ],
     );

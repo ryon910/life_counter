@@ -12,6 +12,8 @@ class AppInput extends StatelessWidget {
     this.textAlign = TextAlign.start,
     this.onChanged,
     this.showBorder = false,
+    this.focusNode,
+    this.textInputAction,
   });
 
   final TextEditingController? controller;
@@ -20,11 +22,15 @@ class AppInput extends StatelessWidget {
   final TextAlign textAlign;
   final ValueChanged<String>? onChanged;
   final bool showBorder;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
+      textInputAction: textInputAction,
       textAlign: textAlign,
       maxLength: maxLength,
       onChanged: onChanged,

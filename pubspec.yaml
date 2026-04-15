@@ -1,7 +1,7 @@
 name: life_counter
 description: "人生は有限だから、1日を大切に生きてほしい。"
 publish_to: 'none'
-version: 1.0.1+4
+version: 1.0.2+5
 
 environment:
   sdk: ^3.11.3

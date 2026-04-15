@@ -58,41 +58,6 @@ class MyPage extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // Premium セクション
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.accentSurface,
-                    AppColors.accentLight.withValues(alpha: 0.08),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderAccent),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    '\u2726 Premium（準備中 — 近日公開）',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.accent,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text('大切な人の無制限登録、記録カスタマイズ',
-                      style: AppTextStyles.caption.copyWith(fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text('価値観の分析、週次/月次レポートなど',
-                      style: AppTextStyles.caption.copyWith(fontSize: 12)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
             AppCard(
               child: Column(
                 children: [
@@ -112,7 +77,7 @@ class MyPage extends ConsumerWidget {
             const SizedBox(height: 28),
 
             Text(
-              'LifeCounter v1.0.1',
+              'LifeCounter v1.0.2',
               style: AppTextStyles.caption
                   .copyWith(fontSize: 11, color: AppColors.textDisabled),
             ),
@@ -128,7 +93,7 @@ class MyPage extends ConsumerWidget {
     final uri = Uri(
       scheme: 'mailto',
       path: 'ryo.nakano.biz+lifecounter@gmail.com',
-      query: 'subject=LifeCounter フィードバック&body=\n\n---\nLifeCounter v1.0.1',
+      query: 'subject=LifeCounter フィードバック&body=\n\n---\nLifeCounter v1.0.2',
     );
     launchUrl(uri);
   }
